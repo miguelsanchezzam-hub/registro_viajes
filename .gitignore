@@ -1,8 +1,4 @@
 node_modules/
-.bun-cache/
-client/dist/
-server/dist/
-*.tsbuildinfo
-.tsbuildinfo*
-app.db
+fuente/dist/
+fuente/src/main.build.tsx
 .DS_Store

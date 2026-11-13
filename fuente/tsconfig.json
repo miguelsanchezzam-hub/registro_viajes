@@ -4,11 +4,12 @@
     "module": "Preserve",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
-    "allowJs": true,
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "types": ["react", "react-dom"],
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "strict": true,
-    "noImplicitAny": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
@@ -17,8 +18,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "isolatedModules": true,
-    "incremental": true,
-    "tsBuildInfoFile": "./.tsbuildinfo"
-  }
+    "isolatedModules": true
+  },
+  "include": ["src/**/*"]
 }
