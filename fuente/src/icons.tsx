@@ -18,7 +18,9 @@ export type IconName =
   | "chevron-right"
   | "users"
   | "coins"
-  | "history";
+  | "history"
+  | "settings"
+  | "chart";
 
 const PATHS: Record<IconName, ReactNode> = {
   swap: (
@@ -90,6 +92,20 @@ const PATHS: Record<IconName, ReactNode> = {
       <ellipse cx="12" cy="6" rx="7" ry="3" />
       <path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6" />
       <path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+    </>
+  ),
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </>
+  ),
+  chart: (
+    <>
+      <path d="M5 20V11" />
+      <path d="M12 20V4" />
+      <path d="M19 20v-6" />
+      <path d="M3 20.5h18" />
     </>
   ),
   history: (

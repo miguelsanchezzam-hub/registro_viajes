@@ -8,32 +8,24 @@ import {
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SafeAreaTopScrim } from "./sdk";
-import { api, type ApiResponse } from "./api";
+import { api } from "./api";
+import {
+  TYPE_LABELS,
+  TYPE_ORDER,
+  addDays,
+  fmtDay,
+  fmtRange,
+  fmtTime,
+  mondayOf,
+  money,
+  todayStr,
+  type Direction,
+  type Trip,
+  type TripType,
+} from "./comun";
+import { ConfigButton, ConfigSheet } from "./Configuracion";
+import { Historial } from "./Historial";
 import { Icon } from "./icons";
-
-type Trip = ApiResponse<typeof api, "listTrips">["trips"][number];
-type TripType = Trip["type"];
-type Direction = Trip["people"][number]["direction"];
-
-const TYPE_LABELS: Record<TripType, string> = {
-  redondo: "Redondo",
-  simple: "Simple",
-  doble: "Doble",
-  triple: "Triple",
-  aeropuerto: "Aeropuerto",
-  sucursal: "Sucursal",
-  especial: "Especial",
-};
-
-const TYPE_ORDER: TripType[] = [
-  "redondo",
-  "simple",
-  "doble",
-  "triple",
-  "aeropuerto",
-  "sucursal",
-  "especial",
-];
 
 const TYPE_ICON: Record<TripType, ReactNode> = {
   redondo: <Icon name="swap" />,
@@ -68,75 +60,10 @@ const DIRECTIONS: Direction[] = ["entra", "sale"];
 
 type Mode = "entra" | "sale" | "ambas";
 
-const moneyFmt = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  maximumFractionDigits: 0,
-});
-
-function money(cents: number): string {
-  return moneyFmt.format(cents / 100);
-}
-
-function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
-}
-
-function todayStr(): string {
-  return toDateStr(new Date());
-}
-
 // Current wall-clock time of the phone as HH:MM — this is the automatic stamp.
 function nowHHMM(): string {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function parseDate(s: string): Date {
-  return new Date(`${s}T00:00:00`);
-}
-
-function addDays(s: string, n: number): string {
-  const d = parseDate(s);
-  d.setDate(d.getDate() + n);
-  return toDateStr(d);
-}
-
-function mondayOf(s: string): string {
-  const d = parseDate(s);
-  const dow = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - dow);
-  return toDateStr(d);
-}
-
-const dayFmt = new Intl.DateTimeFormat("es-MX", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-});
-const shortDayFmt = new Intl.DateTimeFormat("es-MX", {
-  day: "numeric",
-  month: "short",
-});
-
-function fmtDay(s: string): string {
-  const t = dayFmt.format(parseDate(s));
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
-
-function fmtRange(from: string, to: string): string {
-  return `${shortDayFmt.format(parseDate(from))} – ${shortDayFmt.format(parseDate(to))}`;
-}
-
-function fmtTime(t: string | null): string | null {
-  if (!t) return null;
-  const [h = "0", m = "00"] = t.split(":");
-  const hour = Number(h);
-  const suffix = hour >= 12 ? "p. m." : "a. m.";
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${h12}:${m} ${suffix}`;
 }
 
 // Latest stamped time of the trip (arrival or departure); "" if it has none.
@@ -185,9 +112,8 @@ export function App() {
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null);
   // Days start closed (only their summary shows); tap a day to open it.
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
-  const [showRates, setShowRates] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showPeople, setShowPeople] = useState(false);
+  const [tab, setTab] = useState<"viajes" | "historial">("viajes");
+  const [showConfig, setShowConfig] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
   const currentWeekStart = mondayOf(todayStr());
@@ -221,12 +147,6 @@ export function App() {
     queryFn: () => api.listPeople({}),
   });
   const catalog = peopleQuery.data?.people ?? [];
-
-  const historyQuery = useQuery({
-    queryKey: ["week-history"],
-    queryFn: () => api.weekHistory({}),
-    enabled: showHistory,
-  });
 
   const totalCents = trips.reduce((s, t) => s + t.amount_cents, 0);
 
@@ -267,7 +187,6 @@ export function App() {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["trips"] });
     void queryClient.invalidateQueries({ queryKey: ["people"] });
-    void queryClient.invalidateQueries({ queryKey: ["week-history"] });
   };
 
   const addMutation = useMutation({
@@ -411,16 +330,24 @@ export function App() {
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <SafeAreaTopScrim backgroundColor="var(--bg)" />
-      <main className="mx-auto w-full max-w-2xl px-4 pb-32">
+      <main className="mx-auto w-full max-w-2xl px-4 pb-40">
         {/* Top bar */}
-        <header className="pt-3">
+        <header className="flex items-center justify-between gap-3 pt-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--accent-ink)]">
               Mis viajes
             </p>
-            <h1 className="text-xl font-bold leading-6">Registro de viajes</h1>
+            <h1 className="text-xl font-bold leading-6">
+              {tab === "viajes" ? "Registro de viajes" : "Historial"}
+            </h1>
           </div>
+          <ConfigButton onClick={() => setShowConfig(true)} />
         </header>
+
+        {tab === "historial" && <Historial />}
+
+        {tab === "viajes" && (
+          <>
 
         {/* Week navigation + hero total */}
         <section className="hero mt-4 px-5 pb-6 pt-4">
@@ -642,96 +569,52 @@ export function App() {
             );
           })}
         </section>
-
-        {/* People catalog */}
-        <Collapsible
-          icon="users"
-          title="Personas"
-          open={showPeople}
-          onToggle={() => setShowPeople(!showPeople)}
-        >
-          <PeopleManager
-            catalog={catalog}
-            onAdd={(name) => addPersonMutation.mutateAsync(name)}
-            onRemove={(name) => removePersonMutation.mutate(name)}
-          />
-        </Collapsible>
-
-        {/* Rates editor */}
-        <Collapsible
-          icon="coins"
-          title="Tarifas por tipo de viaje"
-          open={showRates}
-          onToggle={() => setShowRates(!showRates)}
-        >
-          <div className="space-y-2">
-            {TYPE_ORDER.filter((t) => t !== "especial").map((t) => (
-              <RateRow
-                key={t}
-                label={TYPE_LABELS[t]}
-                cents={rates.get(t) ?? 0}
-                saving={
-                  rateMutation.isPending && rateMutation.variables?.type === t
-                }
-                onSave={(cents) =>
-                  rateMutation.mutate({ type: t, amount_cents: cents })
-                }
-              />
-            ))}
-            <p className="text-sm text-[var(--dim)]">
-              El viaje especial no tiene tarifa fija: su monto se escribe en
-              cada registro.
-            </p>
-          </div>
-        </Collapsible>
-
-        {/* Week history */}
-        <Collapsible
-          icon="history"
-          title="Semanas anteriores"
-          open={showHistory}
-          onToggle={() => setShowHistory(!showHistory)}
-        >
-          {historyQuery.isPending && (
-            <p className="text-sm text-[var(--dim)]">Cargando…</p>
-          )}
-          {(historyQuery.data?.weeks ?? []).length === 0 &&
-            !historyQuery.isPending && (
-              <p className="text-sm text-[var(--dim)]">
-                Aún no hay semanas con viajes registrados.
-              </p>
-            )}
-          <ul className="space-y-2">
-            {(historyQuery.data?.weeks ?? []).map((w) => (
-              <li key={w.week_start}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWeekStart(w.week_start);
-                    setPersonFilter("");
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="card flex w-full items-center justify-between px-4 py-3 text-left"
-                >
-                  <span>
-                    <span className="block font-semibold">
-                      {fmtRange(w.week_start, w.week_end)}
-                    </span>
-                    <span className="block text-sm text-[var(--dim)]">
-                      {w.trip_count} {w.trip_count === 1 ? "viaje" : "viajes"}
-                    </span>
-                  </span>
-                  <span className="font-bold tabular-nums text-[var(--accent-ink)]">
-                    {money(w.total_cents)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Collapsible>
+          </>
+        )}
       </main>
 
-      {!form && <QuickAddDial rates={rates} onPick={openNew} />}
+      <nav className="tabbar" aria-label="Secciones">
+        <div className="tabbar-in">
+          <button
+            type="button"
+            className="tab"
+            aria-current={tab === "viajes" ? "page" : undefined}
+            onClick={() => setTab("viajes")}
+          >
+            <Icon name="plane" size={22} />
+            <span>Viajes</span>
+          </button>
+          <button
+            type="button"
+            className="tab"
+            aria-current={tab === "historial" ? "page" : undefined}
+            onClick={() => {
+              setForm(null);
+              setFormError(null);
+              setTab("historial");
+              window.scrollTo({ top: 0 });
+            }}
+          >
+            <Icon name="chart" size={22} />
+            <span>Historial</span>
+          </button>
+        </div>
+      </nav>
+
+      {showConfig && (
+        <ConfigSheet
+          onClose={() => setShowConfig(false)}
+          catalog={catalog}
+          rates={rates}
+          savingRate={rateMutation.isPending ? (rateMutation.variables?.type ?? null) : null}
+          onAddPerson={(name) => addPersonMutation.mutateAsync(name)}
+          onRemovePerson={(name) => removePersonMutation.mutate(name)}
+          onSaveRate={(type, cents) => rateMutation.mutate({ type, amount_cents: cents })}
+        />
+      )}
+
+
+      {tab === "viajes" && !form && <QuickAddDial rates={rates} onPick={openNew} />}
     </div>
   );
 }
@@ -813,43 +696,6 @@ function QuickAddDial({
         </button>
       </div>
     </>
-  );
-}
-
-function Collapsible({
-  icon,
-  title,
-  open,
-  onToggle,
-  children,
-}: {
-  icon: "users" | "coins" | "history";
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <section className="mt-5">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="card flex w-full items-center gap-3 px-4 py-3 text-left"
-      >
-        <span className="text-[var(--accent-ink)]">
-          <Icon name={icon} size={20} />
-        </span>
-        <span className="flex-1 font-semibold">{title}</span>
-        <span
-          className="text-[var(--dim)] transition-transform"
-          style={{ transform: open ? "rotate(90deg)" : "none" }}
-        >
-          <Icon name="chevron-right" size={18} />
-        </span>
-      </button>
-      {open && <div className="pop-in mt-3">{children}</div>}
-    </section>
   );
 }
 
@@ -1372,141 +1218,3 @@ function LegCard({
   );
 }
 
-function PeopleManager({
-  catalog,
-  onAdd,
-  onRemove,
-}: {
-  catalog: string[];
-  onAdd: (name: string) => Promise<unknown>;
-  onRemove: (name: string) => void;
-}) {
-  const [draft, setDraft] = useState("");
-  const [confirming, setConfirming] = useState<string | null>(null);
-
-  async function add() {
-    const name = draft.trim();
-    if (name === "") return;
-    await onAdd(name);
-    setDraft("");
-  }
-
-  return (
-    <div className="card p-4">
-      <p className="text-sm text-[var(--dim)]">
-        Escribes cada nombre una sola vez; después lo eliges con un toque al
-        registrar un viaje.
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {catalog.length === 0 && (
-          <p className="text-sm text-[var(--dim)]">Todavía no hay personas.</p>
-        )}
-        {catalog.map((name) =>
-          confirming === name ? (
-            <span key={name} className="chip chip-static">
-              ¿Quitar a {name}?
-              <button
-                type="button"
-                className="font-bold text-[var(--danger)]"
-                onClick={() => {
-                  onRemove(name);
-                  setConfirming(null);
-                }}
-              >
-                Sí
-              </button>
-              <button
-                type="button"
-                className="text-[var(--dim)]"
-                onClick={() => setConfirming(null)}
-              >
-                No
-              </button>
-            </span>
-          ) : (
-            <span key={name} className="chip chip-static">
-              {name}
-              <button
-                type="button"
-                aria-label={`Quitar a ${name}`}
-                className="grid place-items-center text-[var(--dim)]"
-                style={{ minHeight: 0 }}
-                onClick={() => setConfirming(name)}
-              >
-                <Icon name="x" size={14} />
-              </button>
-            </span>
-          ),
-        )}
-      </div>
-      <div className="mt-4 flex gap-2">
-        <input
-          type="text"
-          aria-label="Nombre de la persona"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void add();
-            }
-          }}
-          placeholder="Nueva persona"
-          className="input"
-        />
-        <button type="button" onClick={() => void add()} className="btn btn-soft shrink-0">
-          Agregar
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function RateRow({
-  label,
-  cents,
-  saving,
-  onSave,
-}: {
-  label: string;
-  cents: number;
-  saving: boolean;
-  onSave: (cents: number) => void;
-}) {
-  const [value, setValue] = useState<string | null>(null);
-  const shown = value ?? String(cents / 100);
-  const dirty = value != null && Math.round(Number(value) * 100) !== cents;
-  return (
-    <div className="card flex items-center gap-2 px-3 py-2">
-      <label
-        htmlFor={`rate-${label}`}
-        className="w-28 shrink-0 text-sm font-semibold"
-      >
-        {label}
-      </label>
-      <span className="text-[var(--dim)]">$</span>
-      <input
-        id={`rate-${label}`}
-        type="number"
-        aria-label={`Tarifa de ${label} en pesos`}
-        inputMode="decimal"
-        min="0"
-        step="any"
-        value={shown}
-        onChange={(e) => setValue(e.target.value)}
-        className="input py-1 tabular-nums"
-      />
-      <button
-        type="button"
-        disabled={!dirty || saving}
-        onClick={() => {
-          onSave(Math.round(Number(shown) * 100));
-          setValue(null);
-        }}
-        className="btn btn-soft shrink-0 disabled:opacity-40"
-      >
-        {saving ? "…" : "Guardar"}
-      </button>
-    </div>
-  );
-}

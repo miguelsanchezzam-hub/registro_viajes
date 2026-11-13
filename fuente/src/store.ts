@@ -196,9 +196,14 @@ let syncAgain = false;
 let syncErr: string | null = null;
 let lastOk: number | null = null;
 let inFlight = new Set<string>();
-let infoListener: () => void = () => {};
+const infoListeners = new Set<() => void>();
+const infoListener = () => infoListeners.forEach((fn) => fn());
+/** Avisa cada vez que cambia el estado de la sincronización. Devuelve la función para dejar de escuchar. */
 export const onSyncInfo = (fn: () => void) => {
-  infoListener = fn;
+  infoListeners.add(fn);
+  return () => {
+    infoListeners.delete(fn);
+  };
 };
 const pendingTrips = () => [...cache.trips.values()].filter((t) => t.synced !== true).sort((a, b) => a.id - b.id);
 const pendingCount = () => pendingTrips().length + st.pendingDel.length + (st.settingsDirty ? 1 : 0);

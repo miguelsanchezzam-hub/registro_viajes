@@ -21,7 +21,9 @@ En GitHub: repositorio `registro_viajes` → Settings → Pages → Source: *Dep
 Abre esa dirección en Safari → Compartir → «Añadir a pantalla de inicio».
 
 ## 5. Conectar con la hoja
-Toca el botón de arriba a la derecha («Conectar con Google Sheet») → pega la **URL del script** (la que termina en `/exec`, la misma de «Mis finanzas») y el **código secreto** → Probar conexión → Guardar.
+Toca el **engrane** de arriba a la derecha (Configuración) → en «Conexión con Google Sheet» pega la **URL del script** (la que termina en `/exec`, la misma de «Mis finanzas») y el **código secreto** → Probar conexión → Guardar. El engrane se ve en color normal cuando todo está conectado y en **rojo** si el script no está configurado o no responde. Ahí mismo están las **Personas** y las **Tarifas**.
+
+**Historial:** la pestaña de abajo muestra tus viajes por semana, mes o año, con indicadores (total, promedios, mejor día, comparación con el periodo anterior, tipo y persona más frecuentes, horas más movidas) y sus gráficas.
 
 ## Cómo sincroniza
 - Cada viaje, persona o tarifa se guarda primero en el dispositivo (funciona sin internet).
