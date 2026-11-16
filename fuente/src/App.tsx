@@ -581,7 +581,7 @@ export function App() {
             aria-current={tab === "viajes" ? "page" : undefined}
             onClick={() => setTab("viajes")}
           >
-            <Icon name="plane" size={22} />
+            <Icon name="car" size={22} />
             <span>Viajes</span>
           </button>
           <button
